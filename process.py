@@ -1,7 +1,9 @@
 import cv2  
 import numpy as np
-import glob
 import sys
+
+# noise.py from capral-ocr
+# http://opencvpython.blogspot.com.au/2012/06/contours-2-brotherhood.html
 
 debug = True
 message = 'waiting for button press'
