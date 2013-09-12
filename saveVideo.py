@@ -12,10 +12,7 @@ def doloop():
     path = "./videos/"
     num = glob.glob(str(path) + "*.avi")
     i = len(num)
-    video = cv2.VideoWriter(path+'video'+str(i)+'.avi',cv2.cv.CV_FOURCC('D','I','V','X'),20,(640,480))
-    if not video.isOpened():
-        print 'error with video opening'
-        sys.exit(1)
+    
     
     p1 = subprocess.Popen(['ls', '-l', '/dev/v4l/by-id'], stdout=subprocess.PIPE) #, '|', 'grep', 'HD-3000']
     p2 = subprocess.Popen(['grep', 'HD-3000'], stdin = p1.stdout, stdout=subprocess.PIPE)
@@ -32,6 +29,11 @@ def doloop():
     stream = cv2.VideoCapture(cam)    
     if not stream.isOpened():
         print 'error opening stream'
+        sys.exit(1)
+        
+    video = cv2.VideoWriter(path+'video'+str(i)+'.avi',cv2.cv.CV_FOURCC('D','I','V','X'),20,(640,480))
+    if not video.isOpened():
+        print 'error with video opening'
         sys.exit(1)
     
     subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Exposure, Auto', "3"])

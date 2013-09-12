@@ -6,7 +6,7 @@ import sys
 # http://opencvpython.blogspot.com.au/2012/06/contours-2-brotherhood.html
 
 debug = True
-crop = True
+crop = False
 message = 'waiting for button press'
 lowerThresh = 0
 upperThresh = 255
@@ -19,6 +19,13 @@ kernel_size = 3
 h = 0
 w = 0
 c = 0
+
+cropHeight = 0 #0.55 # 0.55 for kinect images
+
+path = "./videos/"
+file = 5
+video2 = cv2.VideoWriter(path+'convert'+str(file)+'.avi',cv2.cv.CV_FOURCC('D','I','V','X'),20,(1280,480))
+circ = np.zeros((480,640,3),np.uint8)
 
 #     k = cv2.waitKey(5)
 #     if (k > -1) and (k < 256):
@@ -53,7 +60,7 @@ def video(stream):
     
 def process(image):
     hc, wc, cc = np.shape(image)
-    cropIm = image[hc*0.55:hc,0:wc]
+    cropIm = image[hc*cropHeight:hc,0:wc]
     if debug:
         cv2.imshow('original', image)
         cv2.waitKey(1)
@@ -77,18 +84,22 @@ def process(image):
     """
     Houghcircles detection
     """
-    img = cv2.medianBlur(grayIm,5)
+    img = cv2.medianBlur(grayIm,3)
     cimg = cropIm
-    circles = cv2.HoughCircles(img,cv2.cv.CV_HOUGH_GRADIENT,1,200,param1=100,param2=40,minRadius=35,maxRadius=90)
+    circles = cv2.HoughCircles(img,cv2.cv.CV_HOUGH_GRADIENT,1,200,param1=100,param2=32,minRadius=35,maxRadius=90)
     if circles is not None:
         if len(circles[0]) < 3:
             for i in circles[0,:]:
                 cv2.circle(cimg,(i[0],i[1]),i[2],(0,255,0),1)  # draw the outer circle
                 cv2.circle(cimg,(i[0],i[1]),2,(0,0,255),3)     # draw the center of the circle
             if debug:
+                
                 cv2.imshow('detected circles',cimg)
 #                 print message
-                cv2.waitKey(500)
+                cv2.waitKey(10)
+                circ[hc*cropHeight:hc,0:wc] = cimg
+    da = np.hstack((image, circ)).astype(np.uint8, copy=False)
+    video2.write(da)
     
 
 def main(inputfile):
