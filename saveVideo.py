@@ -43,7 +43,7 @@ def doloop():
     # 1 for manual, 3 for auto
     subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Exposure, Auto', "1"])
     # Exposure level 5, 10, 20, 39, 78, 156, 312, ... [roughly double value] (darkest to lightest)
-    subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Exposure (Absolute)', "10"]) 
+    subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Exposure (Absolute)', "5"]) 
     subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Contrast', "1"])
     subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Brightness', "150"])
     subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Saturation', "50"])

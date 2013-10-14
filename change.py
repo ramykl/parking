@@ -11,11 +11,15 @@ message = 'waiting for button press'
 lowerThresh = 0
 upperThresh = 255
 scale = 1  # 8 for 11 bit data
-save = False # flag for saving video
-rotate = True # flag for rotated video
+save = False  # flag for saving video
+rotate = True  # flag for rotated video
 
-lowThreshold = 50
-max_lowThreshold = 100
+minThresh = 0 #84
+maxThresh = 0# 90
+
+circleParam2 = 33
+circleParam1 = 100
+canny_thresh = 45
 ratio = 3
 kernel_size = 3
 h = 0
@@ -23,13 +27,13 @@ w = 0
 c = 0
 sec = 270
 
-cropHeight = 0 #0.55 # 0.55 for kinect images
+cropHeight = 0  # 0.55 # 0.55 for kinect images
 
 path = "./videos/"
 if save:
     file = 5
-    video2 = cv2.VideoWriter(path+'convert'+str(file)+'.avi',cv2.cv.CV_FOURCC('D','I','V','X'),20,(1280,480))
-    circ = np.zeros((480,640,3),np.uint8)
+    video2 = cv2.VideoWriter(path + 'convert' + str(file) + '.avi', cv2.cv.CV_FOURCC('D', 'I', 'V', 'X'), 20, (1280, 480))
+    circ = np.zeros((480, 640, 3), np.uint8)
 
 #     k = cv2.waitKey(5)
 #     if (k > -1) and (k < 256):
@@ -45,7 +49,7 @@ def video(stream):
         if not val:
             break
         if crop:
-            frame = frame[0:h,w/2:w]
+            frame = frame[0:h, w / 2:w]
         if rotate:
             frame = cv2.flip(frame, -1)
         process(frame)
@@ -53,7 +57,7 @@ def video(stream):
     
 def process(image):
     hc, wc, cc = np.shape(image)
-    cropIm = image[hc*cropHeight:hc,0:wc]
+    cropIm = image[hc * cropHeight:hc, 0:wc]
 #     if debug:
 #         cv2.imshow('original', image)
 # #         cv2.waitKey(1)
@@ -67,31 +71,43 @@ def process(image):
     """
     Houghcircles detection
     """
-    img = cv2.medianBlur(grayIm,3)
-#     img = cv2.medianBlur(thresh,5)
-#     r, img = cv2.threshold(img, 83, 0, cv2.THRESH_TOZERO)
-#     r, img = cv2.threshold(img, 200, 0, cv2.THRESH_TOZERO_INV)
-    r, img = cv2.threshold(img, 85, 0, cv2.THRESH_TOZERO_INV)
+    img = cv2.medianBlur(grayIm, 5)
+# # # #     val, image = cv2.threshold(src, thresh, maxval, type)
+
+#     r, img = cv2.threshold(img, minThresh, 0, cv2.THRESH_TOZERO+cv2.THRESH_OTSU)
+#     r, img = cv2.threshold(img, maxThresh, 255, cv2.THRESH_TRUNC +cv2.THRESH_OTSU)
+    r, img = cv2.threshold(img, maxThresh, 0, cv2.THRESH_TOZERO_INV+cv2.THRESH_OTSU)
+#     r, img = cv2.threshold(img, minThresh, 0, cv2.THRESH_TOZERO)
+
+#     img = cv2.Canny(img, canny_thresh, canny_thresh * ratio, apertureSize=kernel_size)
+#     r, img = cv2.adaptiveThreshold(img, 100, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, 9)
+    
+    
     if debug:    
-        cv2.imshow('thresh',img)
+        cv2.imshow('thresh', img)
         cv2.waitKey(1)
     cimg = cropIm
-    circles = cv2.HoughCircles(img,cv2.cv.CV_HOUGH_GRADIENT,1,400,param1=100,param2=45,minRadius=50,maxRadius=200)
+#     circles = cv2.HoughCircles(image, method, dp, minDist)
+    circles = cv2.HoughCircles(img, cv2.cv.CV_HOUGH_GRADIENT, 1, 400, param1=circleParam1, param2=circleParam2, minRadius=50, maxRadius=200)
     if circles is not None:
         if len(circles[0]) < 2:
             count = 0
-            for i in circles[0,:]:
-                if (i[1] < (sec+80)) and (i[1] > (sec-80)):
+            for i in circles[0, :]:
+                if (i[1] < (sec + 80)) and (i[1] > (sec - 80)):
                     count += 1
-                    cv2.circle(cimg,(i[0],i[1]),i[2],(0,255,0),1)  # draw the outer circle
-                    cv2.circle(cimg,(i[0],i[1]),2,(0,0,255),3)     # draw the center of the circle
+                    cv2.circle(cimg, (i[0], i[1]), i[2], (0, 255, 0), 1)  # draw the outer circle
+                    cv2.circle(cimg, (i[0], i[1]), 2, (0, 0, 255), 3)  # draw the center of the circle
+                    
+                    cv2.circle(img, (i[0], i[1]), i[2], (0, 255, 0), 1)  # draw the outer circle
+                    cv2.circle(img, (i[0], i[1]), 2, (0, 0, 255), 3)  # draw the center of the circle
             if count:
                 if debug:    
-                    cv2.imshow('detected circles',cimg)
+                    cv2.imshow('detected circles', cimg)
+#                     cv2.imshow('thresh', img)
 #                 print message
                     cv2.waitKey(10)
                     if save:
-                        circ[hc*cropHeight:hc,0:wc] = cimg
+                        circ[hc * cropHeight:hc, 0:wc] = cimg
     if save:
         da = np.hstack((image, circ)).astype(np.uint8, copy=False)
         video2.write(da)
