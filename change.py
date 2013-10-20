@@ -2,8 +2,7 @@ import cv2
 import numpy as np
 import sys
 
-# noise.py from capral-ocr
-# http://opencvpython.blogspot.com.au/2012/06/contours-2-brotherhood.html
+# wheellevel1 = 225 cars
 
 debug = True
 crop = False
@@ -15,8 +14,14 @@ scale = 1  # 8 for 11 bit data
 save = False  # flag for saving video
 rotate = True  # flag for rotated video
 
-minThresh = 0 # 84
-maxThresh = 0 # 90
+minThresh = 0  # 84
+maxThresh = 0  # 90
+
+# Colour thresholds for colours to ignore
+min_green = np.array([0, 60, 68], np.uint8)
+max_green = np.array([240, 255, 255], np.uint8)
+min_white = np.array([0, 0, 200], np.uint8)
+max_white = np.array([255, 13, 255], np.uint8)
 
 circleParam2 = 33
 circleParam1 = 100
@@ -26,23 +31,27 @@ kernel_size = 3
 h = 0
 w = 0
 c = 0
-sec = 270 # 150
+sec = 270  # 150
 
 last_circle = [0, 0, 0, 0]
-last_wheel = [0, 0, 0, 0]
+last_wheel = 0
 carCount = 0
 wheelCount = 0
-resetFlag = 1
-allowedX = 20
-allowedFrames = 5
-allowedMiss = 2
-counter = 4
+resetFlag = True
+allowedX = 160
+allowedFrames = 14
+allowedMiss = 3
+counter = 0
+wheel = False
+wheel2 = False
+
 
 path = "./videos/"
 if save:
     file = 5
     video2 = cv2.VideoWriter(path + 'convert' + str(file) + '.avi', cv2.cv.CV_FOURCC('D', 'I', 'V', 'X'), 20, (1280, 480))
     circ = np.zeros((480, 640, 3), np.uint8)
+
 
 def process(image, frameCount, similar):
     global last_wheel
@@ -51,41 +60,62 @@ def process(image, frameCount, similar):
     global carCount
     global resetFlag
     global counter
+    global wheel
+    global wheel2
     hc, wc, cc = np.shape(image)
     cropIm = image[hc * cropHeight:hc, 0:wc]
-#     if debug:
-#         cv2.imshow('original', image)
-# #         cv2.waitKey(1)
-        
+    
+    # colour filter
+    hsv = cv2.cvtColor(cropIm, cv2.COLOR_BGR2HSV)
+    maskg = cv2.inRange(hsv, min_green, max_green)
     grayIm = cv2.cvtColor(cropIm, cv2.COLOR_BGR2GRAY)
-#     if debug:    
-#         cv2.imshow('Gray',grayIm)
-#         cv2.waitKey(10)
+    maskw = cv2.inRange(hsv, min_white, max_white)
+    maskg = cv2.bitwise_not(maskg)
+    maskw = cv2.bitwise_not(maskw)
+    image = grayIm * maskg * maskw
+    
+    
+#     if debug:
+#         cv2.imshow('std', cropIm)
+#         cv2.imshow('white', maskw)
+#         cv2.imshow('green', maskg)
+#         cv2.imshow('com', image)
+#         cv2.waitKey()
     
     """
     Houghcircles detection 
-    
+      
     val, image = cv2.threshold(src, thresh, maxval, type)
     circles = cv2.HoughCircles(image, method, dp, minDist) -->> [[x,y,radius],[...],...]    
     """
-    img = cv2.medianBlur(grayIm, 5)
+    img = cv2.medianBlur(image, 5)
     r, img = cv2.threshold(img, maxThresh, 0, cv2.THRESH_TOZERO_INV+cv2.THRESH_OTSU)
-    
+      
     if debug:    
         cv2.imshow('thresh', img)
         cv2.waitKey(1)
-    
+      
     cimg = cropIm
-
-    if frameCount - last_circle[3] > allowedFrames:
-        resetFlag = 1
-        similar = 0
-#         counter = 2
-#         print 'reset'
     
-    if counter >= allowedMiss:
-        similar = 0
-            
+    if frameCount-last_wheel >= allowedFrames+allowedMiss and wheel2 == True:
+        resetFlag = True
+        if wheel == True:
+            carCount += 1
+            seconds = frameCount/20
+            print seconds/60,':',seconds%60,carCount
+        wheel2 = False
+        wheel = False
+    
+    # find random circle, and clear
+    if frameCount - last_circle[3] >= allowedMiss and wheel2 != True:
+        if wheel != True:
+            resetFlag = True
+        else:
+            last_wheel = last_circle[3]
+            wheel2 = True
+            wheel = False
+        counter = 0
+        
     circles = cv2.HoughCircles(img, cv2.cv.CV_HOUGH_GRADIENT, 1, 400, param1=circleParam1, param2=circleParam2, minRadius=50, maxRadius=200)
     if circles is not None:
         if len(circles[0]) < 2:
@@ -95,27 +125,17 @@ def process(image, frameCount, similar):
                     flag += 1
                     cv2.circle(cimg, (i[0], i[1]), i[2], (0, 255, 0), 1)  # draw the outer circle
                     cv2.circle(cimg, (i[0], i[1]), 2, (0, 0, 255), 3)  # draw the center of the circle
-                    
-                    if resetFlag == 0:
-                        print "xpos:", i[0], last_circle[0], last_wheel[0]
-                        print "ypos:", i[1], last_circle[1], last_wheel[1]
-                        if ((last_circle[0]-allowedX) <= i[0] <= last_circle[0]):
-                            if counter <allowedMiss:
-                                if ((last_wheel[0]-allowedX) <= last_circle[0] <= last_wheel[0]):
-                                    similar = 1
-                            last_wheel = last_circle[:]
-                            counter = -1
-#                         else:
-#                             counter +=1
-#                     else:
-#                         counter +=1
+                    if resetFlag:
+                        resetFlag = False
+                        counter = 0
+                        
+                    elif last_circle[0]-allowedX <= i[0] <= last_circle[0]+5:
+                        counter += 1
+                        
                     last_circle[0] = i[0]
                     last_circle[1] = i[1]
                     last_circle[2] = i[2]
                     last_circle[3] = frameCount
-                    resetFlag = 0
-#                 else:
-#                     counter +=1
                     
             if flag:
                 if debug:    
@@ -123,18 +143,14 @@ def process(image, frameCount, similar):
                     cv2.waitKey(1)
                     if save:
                         circ[hc * cropHeight:hc, 0:wc] = cimg
-#         else:
-#             counter += 1
-#     else:
-#         counter += 1
-    
+
     if save:
         da = np.hstack((image, circ)).astype(np.uint8, copy=False)
         video2.write(da)
-    counter += 1
-    print 'sim:', similar,' counter:', counter, ' reset:', resetFlag 
-    cv2.waitKey(100)
-    return similar
+        
+    if counter >= 2:
+        wheel = True
+#     print counter, wheel, wheel2, carCount
 
     
 def video(stream):
@@ -149,7 +165,7 @@ def video(stream):
             frame = frame[0:h, w / 2:w]
         if rotate:
             frame = cv2.flip(frame, -1)
-        frameCount +=1
+        frameCount += 1
         similar = process(frame, frameCount, similar)
         val, frame = stream.read()
         
