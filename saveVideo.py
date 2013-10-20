@@ -17,6 +17,7 @@ def doloop():
     """
     p1 = subprocess.Popen(['ls', '-l', '/dev/v4l/by-id'], stdout=subprocess.PIPE) #, '|', 'grep', 'HD-3000']
     p2 = subprocess.Popen(['grep', 'HD-3000'], stdin = p1.stdout, stdout=subprocess.PIPE)
+#     p2 = subprocess.Popen(['grep', 'C920'], stdin = p1.stdout, stdout=subprocess.PIPE)
     p1.stdout.close()
     out = p2.communicate()[0]
     if out == '':
@@ -48,6 +49,7 @@ def doloop():
     subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Brightness', "150"])
     subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Saturation', "50"])
     subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Sharpness', "25"])
+    subprocess.Popen(['uvcdynctrl', '-dvideo'+str(cam), "-s",  'Power Line Frequency', "0"])
     
 #     stream.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, y)
 #     stream.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, x)
