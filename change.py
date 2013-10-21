@@ -92,6 +92,7 @@ def process(image, frameCount, similar):
     r, img = cv2.threshold(img, maxThresh, 0, cv2.THRESH_TOZERO_INV+cv2.THRESH_OTSU)
       
     if debug:    
+        cv2.imshow('image', cropIm)
         cv2.imshow('thresh', img)
         cv2.waitKey(1)
       
@@ -150,7 +151,7 @@ def process(image, frameCount, similar):
         
     if counter >= 2:
         wheel = True
-#     print counter, wheel, wheel2, carCount
+    print counter, wheel, wheel2, carCount
 
     
 def video(stream):
